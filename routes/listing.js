@@ -5,6 +5,10 @@ const { listingSchema, reviewSchema } = require("../schema.js");
 const ExpressError = require("../utils/ExpressError.js");
 const Listing = require("../models/listing.js");
 const { isLoggedIn } = require("../middleware.js");
+const multer = require("multer");
+const { storage } = require("../cloudConfig.js");
+
+const upload = multer({ storage });
 
 const validateListing = (req, res, next) => {
   let { error } = listingSchema.validate(req.body);
@@ -15,6 +19,10 @@ const validateListing = (req, res, next) => {
     next();
   }
 };
+
+// router.route("/").post(upload.single("listing[image]"), (req, res) => {
+//   res.send(req.file);
+// });
 
 //Index Route
 router.get(
@@ -48,9 +56,14 @@ router.get(
 router.post(
   "/",
   isLoggedIn,
+
+  upload.single("listing[image]"),
   validateListing,
   wrapAsync(async (req, res, next) => {
+    let url = req.file.path;
+    let filename = req.file.filename;
     const newListing = new Listing(req.body.listing);
+    newListing.image = { url, filename };
     await newListing.save();
     req.flash("success", "New Listing Created!");
     res.redirect("/listings");
